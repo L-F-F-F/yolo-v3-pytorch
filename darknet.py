@@ -30,6 +30,10 @@ def parse_cfg(cfgfile):
     blocks.append(block)
     return blocks
 
+class EmptyLayer(nn.Module):
+    def __init__(self):
+        super(EmptyLayer,self).__init__()
+
 
 def creat_modules(blocks):
     '''我们的函数将会返回一个 nn.ModuleList。这个类几乎等同于一个包含 nn.Module 对象的普通列表。
@@ -83,6 +87,37 @@ def creat_modules(blocks):
             if activation == "leaky":
                 acti = nn.LeakyReLU(0.1,inplace=True)   #负斜率0.1的relu，是否选择覆盖运算
                 module.add_module("leak_{0}".format(index),acti)
+
+        # 上采样层，函数由interpolate替代，放缩倍数scale_factor和size只能给一个，扩展输入矩阵
+        elif (x["type"] == "upsample"):
+            stride = int(x["stride"])
+            # 矩阵扩为2倍，最近邻nearest，线性linear，双线性bilinear 和 三线性trilinear
+            upsample = nn.Upsample(scale_factor=2,mode="bilinear")
+            module.add_module("upsample_{}".format(index),upsample)
+
+        #路由层，有两种：1个数字，2个数字的
+        elif(x["type"] == "route"):
+            x["layer"] = x["layer"].split(',')
+            start = int(x["layer"][0])#第一个数字
+            try:
+                end=int(x["layer"][1])#如果有第二个数字
+            except:
+                end=0
+
+            if start > 0:
+                start = start-index
+            if end > 0 :
+                end = end-index
+
+            route = EmptyLayer()    # 空层
+            module.add_module("route_{0}".format(index),route)
+
+            if end<0:
+                filters=output_filters[index+start]+output_filters[index+end]
+            else:
+                filters=output_filters[index+start]
+
+
 # cfg = parse_cfg('yolov3.cfg')
 # creat_modules(cfg)
 # print(cfg)
