@@ -158,3 +158,8 @@ class DetectionLayer(nn.Module):
 # cfg = parse_cfg('yolov3.cfg')
 # [net,mod] = create_modules(cfg)
 # print(mod)
+class Darknet(nn.Module):
+    def __init__(self, cfgfile):
+        super(Darknet, self).__init__()
+        self.blocks = parse_cfg(cfgfile)
+        self.net_info, self.module_list = create_modules(self.blocks)
