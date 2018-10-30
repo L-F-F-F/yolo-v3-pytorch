@@ -200,7 +200,7 @@ class Darknet(nn.Module):
 
                     x = torch.cat((map1, map2), 1)#cat函数将两个特征图沿深度方向连起来
 
-            #捷径层
+            #捷径层（跳过连接），将前一层的特征图添加到from的层上
             elif module_type == "shortcut":
                 from_ = int(module["from"])
                 x = outputs[i - 1] + outputs[i + from_]
