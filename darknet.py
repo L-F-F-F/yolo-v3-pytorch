@@ -52,6 +52,7 @@ def create_modules(blocks):
     for index, x in enumerate(blocks[1:]):
         module = nn.Sequential()  # 每个模块可能包含多个层，Sequential顺序串联起来
 
+        #卷积层
         if (x["type"] == "convolutional"):
             activation = x["activation"]
             try:
@@ -71,7 +72,7 @@ def create_modules(blocks):
             else:
                 pad = 0
 
-            # 卷积层
+            # 添加卷积层
             conv = nn.Conv2d(prev_filters, filters, kernel_size, stride, pad, bias=bias)
             module.add_module("conv_{0}".format(index), conv)
 
@@ -140,7 +141,7 @@ def create_modules(blocks):
         prev_filters = filters
         output_filters.append(filters)
 
-    #net_info就是net层信息，再返回各层list
+    # net_info就是net层信息，再返回各层list
     return (net_info, module_list)
 
 
@@ -154,12 +155,52 @@ class DetectionLayer(nn.Module):
         super(DetectionLayer, self).__init__()
         self.anchors = anchors
 
-# 测试
+
+# 测试 parse_cfg 和 create_modules
 # cfg = parse_cfg('yolov3.cfg')
 # [net,mod] = create_modules(cfg)
 # print(mod)
+
 class Darknet(nn.Module):
-    def __init__(self, cfgfile):
+    def __init__(self, cfgfile):#初始化解析了cfg文件
         super(Darknet, self).__init__()
         self.blocks = parse_cfg(cfgfile)
         self.net_info, self.module_list = create_modules(self.blocks)
+
+    def forward(self, x, CUDA):#前向传播，x是输入
+        modules = self.blocks[1:]#blocks[0:]是net层
+        outputs = {}  #由于路由层和捷径层需要之前层的输出特征图，outputs 中缓存每个层的输出特征图。
+        # 关键在于层的索引，且值对应特征图。
+
+        write = 0  # flag：是否遇到第一个检测图
+        for i, module in enumerate(modules):
+            module_type = (module["type"])
+
+            #卷积层、上采样层
+            if module_type == "convolutional" or module_type == "upsample":
+                x = self.module_list[i](x)
+
+            #路由层，获取之前层的连接
+            elif module_type == "route":
+                layers = module["layers"]
+                layers = [int(a) for a in layers]
+
+                if (layers[0]) > 0:#正数的话，减当前层index
+                    layers[0] = layers[0] - i
+
+                if len(layers) == 1:#路由层如果只有1个数字
+                    x = outputs[i + (layers[0])]
+
+                else:#路由层两个数字，特征图连接
+                    if (layers[1]) > 0:
+                        layers[1] = layers[1] - i
+
+                    map1 = outputs[i + layers[0]]
+                    map2 = outputs[i + layers[1]]
+
+                    x = torch.cat((map1, map2), 1)#cat函数将两个特征图沿深度方向连起来
+
+            #捷径层
+            elif module_type == "shortcut":
+                from_ = int(module["from"])
+                x = outputs[i - 1] + outputs[i + from_]

@@ -7,4 +7,4 @@ AlexeyAB的[yolo-v3](https://github.com/AlexeyAB/darknet)基于C语言的darknet
 	3、实现网络的前向传播
 	4、objectness 置信度阈值和非极大值抑制
 	5、设计输入和输出管道
-[机器之心](https://www.jiqizhixin.com/users/7f316f0c-8f72-4231-bb30-0eb1dd5a5660)有两篇不错的中文翻译教程：[从零开始PyTorch项目：YOLO v3目标检测实现](https://www.jiqizhixin.com/articles/2018-04-23-3)，和[下篇](https://www.jiqizhixin.com/articles/042602)。github上源码[ayooshkathuria/pytorch-yolo-v3](https://github.com/ayooshkathuria/pytorch-yolo-v3)，作者正事基于英文教程，与教程的代码略有不同。
+[机器之心](https://www.jiqizhixin.com/users/7f316f0c-8f72-4231-bb30-0eb1dd5a5660)有两篇不错的中文翻译教程：[从零开始PyTorch项目：YOLO v3目标检测实现](https://www.jiqizhixin.com/articles/2018-04-23-3)，和[下篇](https://www.jiqizhixin.com/articles/042602)。相关github上源码[ayooshkathuria/pytorch-yolo-v3](https://github.com/ayooshkathuria/pytorch-yolo-v3)，基于英文教程，与教程的代码略有不同。
