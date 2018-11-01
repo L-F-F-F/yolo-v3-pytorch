@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
+from util import *
 
 
 def parse_cfg(cfgfile):
@@ -52,7 +53,7 @@ def create_modules(blocks):
     for index, x in enumerate(blocks[1:]):
         module = nn.Sequential()  # 每个模块可能包含多个层，Sequential顺序串联起来
 
-        #卷积层
+        # 卷积层
         if (x["type"] == "convolutional"):
             activation = x["activation"]
             try:
@@ -162,45 +163,69 @@ class DetectionLayer(nn.Module):
 # print(mod)
 
 class Darknet(nn.Module):
-    def __init__(self, cfgfile):#初始化解析了cfg文件
+    def __init__(self, cfgfile):  # 初始化解析了cfg文件
         super(Darknet, self).__init__()
         self.blocks = parse_cfg(cfgfile)
         self.net_info, self.module_list = create_modules(self.blocks)
 
-    def forward(self, x, CUDA):#前向传播，x是输入
-        modules = self.blocks[1:]#blocks[0:]是net层
-        outputs = {}  #由于路由层和捷径层需要之前层的输出特征图，outputs 中缓存每个层的输出特征图。
+    def forward(self, x, CUDA):  # 前向传播，x是输入
+        modules = self.blocks[1:]  # blocks[0:]是net层
+        outputs = {}  # 由于路由层和捷径层需要之前层的输出特征图，outputs 中缓存每个层的输出特征图。
         # 关键在于层的索引，且值对应特征图。
 
-        write = 0  # flag：是否遇到第一个检测图
+        write = 0  # flag：是否遇到第一个检测图,如果 write 是 0，则收集器尚未初始化。
+        # 如果 write 是 1，则收集器已经初始化，我们只需要将检测图与收集器级联起来即可
+
         for i, module in enumerate(modules):
             module_type = (module["type"])
 
-            #卷积层、上采样层
+            # 卷积层、上采样层
             if module_type == "convolutional" or module_type == "upsample":
                 x = self.module_list[i](x)
 
-            #路由层，获取之前层的连接
+            # 路由层，获取之前层的连接
             elif module_type == "route":
                 layers = module["layers"]
                 layers = [int(a) for a in layers]
 
-                if (layers[0]) > 0:#正数的话，减当前层index
+                if (layers[0]) > 0:  # 正数的话，减当前层index
                     layers[0] = layers[0] - i
 
-                if len(layers) == 1:#路由层如果只有1个数字
+                if len(layers) == 1:  # 路由层如果只有1个数字
                     x = outputs[i + (layers[0])]
 
-                else:#路由层两个数字，特征图连接
+                else:  # 路由层两个数字，特征图连接
                     if (layers[1]) > 0:
                         layers[1] = layers[1] - i
 
                     map1 = outputs[i + layers[0]]
                     map2 = outputs[i + layers[1]]
 
-                    x = torch.cat((map1, map2), 1)#cat函数将两个特征图沿深度方向连起来
+                    x = torch.cat((map1, map2), 1)  # cat函数将两个特征图沿深度方向连起来
 
-            #捷径层（跳过连接），将前一层的特征图添加到from的层上
+            # 捷径层（跳过连接），将前一层的特征图添加到from的层上
             elif module_type == "shortcut":
                 from_ = int(module["from"])
                 x = outputs[i - 1] + outputs[i + from_]
+
+            # 完成util的predict_transform函数之后
+            # 检测层
+            elif module_type == 'yolo':
+
+                anchors = self.module_list[i][0].anchors
+
+                inp_dim = int(self.net_info["height"])  # 输入维度
+
+                num_classes = int(module["classes"])  # 类别数
+
+                x = x.data
+                x = predict_transform(x, inp_dim, anchors, num_classes, CUDA)
+                if not write:  # 收集器尚未初始化
+                    detections = x
+                    write = 1
+
+                else:  # 将检测图与收集器级联起来即可
+                    detections = torch.cat((detections, x), 1)
+            outputs[i] = x
+
+        return detections
