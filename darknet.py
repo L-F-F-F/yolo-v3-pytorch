@@ -90,7 +90,8 @@ def create_modules(blocks):
         elif (x["type"] == "upsample"):
             stride = int(x["stride"])
             # 矩阵扩为2倍，最近邻nearest，线性linear，双线性bilinear 和 三线性trilinear
-            upsample = nn.Upsample(scale_factor=2, mode="bilinear")
+            upsample = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False)
+            # 自0.4.0版本Upsample函数虚指定align_corners，对齐角落
             module.add_module("upsample_{}".format(index), upsample)
 
         # 路由层，获取之前层的拼接，有两种：1个数字，2个数字的
@@ -168,7 +169,7 @@ class Darknet(nn.Module):
         self.blocks = parse_cfg(cfgfile)
         self.net_info, self.module_list = create_modules(self.blocks)
 
-    def forward(self, x, CUDA):  # 前向传播，x是输入
+    def forward(self, x, CUDA=False):  # 前向传播，x是输入
         modules = self.blocks[1:]  # blocks[0:]是net层
         outputs = {}  # 由于路由层和捷径层需要之前层的输出特征图，outputs 中缓存每个层的输出特征图。
         # 关键在于层的索引，且值对应特征图。
@@ -219,7 +220,9 @@ class Darknet(nn.Module):
                 num_classes = int(module["classes"])  # 类别数
 
                 x = x.data
-                print(CUDA)
+                # print(x)
+                if CUDA:
+                    x = x.cuda()
                 x = predict_transform(x, inp_dim, anchors, num_classes, CUDA)
                 if not write:  # 收集器尚未初始化
                     detections = x
@@ -231,16 +234,103 @@ class Darknet(nn.Module):
 
         return detections
 
-def get_test_input():#测试输入图片
+    def load_weights(self, weightfile):
+
+        fp = open(weightfile, "rb")
+        # 第一个 160 比特的权重文件保存了 5 个 int32 值，它们构成了文件的标头
+        # 主版本数，次版本数，子版本数，4、5是训练期间网络看到的图像
+        header = np.fromfile(fp, dtype=np.int32, count=5)
+        self.header = torch.from_numpy(header)
+        self.seen = self.header[3]
+
+        weights = np.fromfile(fp, dtype=np.float32)
+
+        ptr = 0  # 追踪权重数组位置指针
+        for i in range(len(self.module_list)):  # 迭代地加载权重文件到网络的模块上
+            # 块包含第一块，模块不包含第一块，net块
+            module_type = self.blocks[i + 1]["type"]
+
+            # 卷积层
+            if module_type == "convolutional":
+                model = self.module_list[i]
+                try:  # 是否有batch_normalize 批量标准化
+                    batch_normalize = int(self.blocks[i + 1]["batch_normalize"])
+                except:
+                    batch_normalize = 0
+
+                conv = model[0]
+                # print(batch_normalize)
+                if (batch_normalize):  # 有标准化
+                    bn = model[1]
+                    num_bn_biases = bn.bias.numel()  # Batch Norm Layer 的权重的数量
+
+                    # 加载权重
+                    bn_biases = torch.from_numpy(weights[ptr:ptr + num_bn_biases])
+                    ptr += num_bn_biases
+
+                    bn_weights = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
+                    ptr += num_bn_biases
+
+                    bn_running_mean = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
+                    ptr += num_bn_biases
+
+                    bn_running_var = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
+                    ptr += num_bn_biases
+
+                    # 根据模型权重的维度调整重塑加载的权重
+                    bn_biases = bn_biases.view_as(bn.bias.data)
+                    bn_weights = bn_weights.view_as(bn.weight.data)
+                    bn_running_mean = bn_running_mean.view_as(bn.running_mean)
+                    bn_running_var = bn_running_var.view_as(bn.running_var)
+
+                    # 将数据复制到模型中
+                    bn.bias.data.copy_(bn_biases)
+                    bn.weight.data.copy_(bn_weights)
+                    bn.running_mean.copy_(bn_running_mean)
+                    bn.running_var.copy_(bn_running_var)
+
+                else: # 如果没有标准化，只需要加载卷积层的偏置项
+
+                    num_biases = conv.bias.numel()# 偏置数量
+
+                    # 加载权重
+                    conv_biases = torch.from_numpy(weights[ptr: ptr + num_biases])
+                    ptr = ptr + num_biases
+
+                    # 根据模型权重的维度调整重塑加载的权重
+                    conv_biases = conv_biases.view_as(conv.bias.data)
+
+                    # 将数据复制到模型中
+                    conv.bias.data.copy_(conv_biases)
+
+                # 最后，加载卷积层的权重
+                num_weights = conv.weight.numel()
+                conv_weights = torch.from_numpy(weights[ptr:ptr + num_weights])
+                ptr = ptr + num_weights
+
+                conv_weights = conv_weights.view_as(conv.weight.data)
+                conv.weight.data.copy_(conv_weights)
+
+
+def get_test_input():  # 测试输入图片
     img = cv2.imread("testPics/14-9.jpg")
-    img = cv2.resize(img, (416,416))          #输入维度416
-    img_ =  img[:,:,::-1].transpose((2,0,1))  # BGR -> RGB | H X W C -> C X H X W
-    img_ = img_[np.newaxis,:,:,:]/255.0       #Add a channel at 0 (for batch) | Normalise
-    img_ = torch.from_numpy(img_).float()     #ndarray装TensorFlow 转float
-    img_ = Variable(img_)                     # 变量
+    # img = cv2.imread("testPics/dog-cycle-car.png")
+    img = cv2.resize(img, (416, 416))  # 输入维度416
+    img_ = img[:, :, ::-1].transpose((2, 0, 1))  # BGR -> RGB | H X W C -> C X H X W
+    img_ = img_[np.newaxis, :, :, :] / 255.0  # Add a channel at 0 (for batch) | Normalise
+    img_ = torch.from_numpy(img_).float()  # ndarray装TensorFlow 转float
+    img_ = Variable(img_)  # 变量
     return img_
 
-modeltest = Darknet("cfg/yolov3.cfg")
-inp = get_test_input()
-pred = modeltest(inp)
-print (pred)
+
+# 测试读cfg文件，输出的张量size为torch.Size([1, 10647, 24])，第一个维度为批量大小，因为是单张图像
+# 24行，包括4个边界框属性(bx,by,bh,bw)、1个objectness分数和19个类别分数
+# # modeltest = Darknet("cfg/yolov3.cfg")
+# modeltest = Darknet("cfg/yolo-obj.cfg")
+# inp = get_test_input()
+# pred = modeltest(inp, torch.cuda.is_available())
+# # print (pred)
+# print(pred.size())
+
+model = Darknet("cfg/yolo-obj.cfg")
+model.load_weights("yolov3.weights")
