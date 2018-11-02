@@ -219,6 +219,7 @@ class Darknet(nn.Module):
                 num_classes = int(module["classes"])  # 类别数
 
                 x = x.data
+                print(CUDA)
                 x = predict_transform(x, inp_dim, anchors, num_classes, CUDA)
                 if not write:  # 收集器尚未初始化
                     detections = x
@@ -229,3 +230,17 @@ class Darknet(nn.Module):
             outputs[i] = x
 
         return detections
+
+def get_test_input():#测试输入图片
+    img = cv2.imread("testPics/14-9.jpg")
+    img = cv2.resize(img, (416,416))          #输入维度416
+    img_ =  img[:,:,::-1].transpose((2,0,1))  # BGR -> RGB | H X W C -> C X H X W
+    img_ = img_[np.newaxis,:,:,:]/255.0       #Add a channel at 0 (for batch) | Normalise
+    img_ = torch.from_numpy(img_).float()     #ndarray装TensorFlow 转float
+    img_ = Variable(img_)                     # 变量
+    return img_
+
+modeltest = Darknet("cfg/yolov3.cfg")
+inp = get_test_input()
+pred = modeltest(inp)
+print (pred)
