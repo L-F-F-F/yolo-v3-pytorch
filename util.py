@@ -65,3 +65,10 @@ def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA=True):
     prediction[:, :, :4] *= stride
 
     return prediction
+
+
+#输入为预测结果、置信度（objectness 分数阈值）、种类数 和 nms_conf（NMS IoU 阈值）
+def write_results(prediction, confidence, num_classes, nms_conf = 0.4):
+    #
+    conf_mask = (prediction[:, :, 4] > confidence).float().unsqueeze(2)
+    prediction = prediction * conf_mask

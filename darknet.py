@@ -323,8 +323,9 @@ def get_test_input():  # 测试输入图片
     return img_
 
 
-# 测试读cfg文件，输出的张量size为torch.Size([1, 10647, 24])，第一个维度为批量大小，因为是单张图像
+# 测试读cfg文件，输出的张量size为torch.Size([1, 10647, 24])，第一个维度为批量batch大小，单张图像
 # 24行，包括4个边界框属性(bx,by,bh,bw)、1个objectness分数和19个类别分数
+#10647 是每个图像中所预测的边界框的数量
 # # modeltest = Darknet("cfg/yolov3.cfg")
 # modeltest = Darknet("cfg/yolo-obj.cfg")
 # inp = get_test_input()
