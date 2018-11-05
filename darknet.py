@@ -318,7 +318,7 @@ def get_test_input():  # 测试输入图片
     img = cv2.resize(img, (416, 416))  # 输入维度416
     img_ = img[:, :, ::-1].transpose((2, 0, 1))  # BGR -> RGB | H X W C -> C X H X W
     img_ = img_[np.newaxis, :, :, :] / 255.0  # Add a channel at 0 (for batch) | Normalise
-    img_ = torch.from_numpy(img_).float()  # ndarray装TensorFlow 转float
+    img_ = torch.from_numpy(img_).float()  # ndarray 转 Tensor 转float
     img_ = Variable(img_)  # 变量
     return img_
 
@@ -332,5 +332,5 @@ def get_test_input():  # 测试输入图片
 # # print (pred)
 # print(pred.size())
 
-model = Darknet("cfg/yolo-obj.cfg")
-model.load_weights("yolov3.weights")
+model = Darknet("cfg/yolo-obj_4_416_small.cfg")
+model.load_weights("yolo-obj_24000_4_416_small.weights")

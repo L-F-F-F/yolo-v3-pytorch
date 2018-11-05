@@ -13,7 +13,8 @@ import cv2
 def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA=True):
     batch_size = prediction.size(0)
     stride = inp_dim // prediction.size(2)
-    grid_size = inp_dim // stride
+    #grid_size = inp_dim // stride
+    grid_size = prediction.size(2)
     bbox_attrs = 5 + num_classes  # 每个边界框有5+C个属性：坐标tx ty tw th Obj 类别共C类
     num_anchors = len(anchors)
 
