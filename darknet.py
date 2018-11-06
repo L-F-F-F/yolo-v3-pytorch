@@ -1,11 +1,11 @@
 from __future__ import division
 
+from util import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
-from util import *
 
 
 def parse_cfg(cfgfile):

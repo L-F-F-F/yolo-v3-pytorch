@@ -204,3 +204,10 @@ def bbox_iou(box1, box2):
     iou = inter_area / (b1_area + b2_area - inter_area)
 
     return iou
+
+def load_classes(namesfile):
+    fp = open(namesfile, "r")
+    names = fp.read().split("\n")
+    names = [x for x in names if len(x) > 0]  # 删去空行
+    return names
+
