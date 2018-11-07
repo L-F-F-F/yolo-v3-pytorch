@@ -201,7 +201,8 @@ class Darknet(nn.Module):
 
                     map1 = outputs[i + layers[0]]
                     map2 = outputs[i + layers[1]]
-
+                    # print("map1{}",map1.shape)
+                    # print(map2.shape)
                     x = torch.cat((map1, map2), 1)  # cat函数将两个特征图沿深度方向连起来
 
             # 捷径层（跳过连接），将前一层的特征图添加到from的层上
@@ -327,7 +328,7 @@ def get_test_input():  # 测试输入图片
 # 24行，包括4个边界框属性(bx,by,bh,bw)、1个objectness分数和19个类别分数
 #10647 是每个图像中所预测的边界框的数量
 # # modeltest = Darknet("cfg/yolov3.cfg")
-# modeltest = Darknet("cfg/yolo-obj.cfg")
+# modeltest = Darknet("cfg/yolo-obj_4_416_small.cfg")
 # inp = get_test_input()
 # pred = modeltest(inp, torch.cuda.is_available())
 # # print (pred)

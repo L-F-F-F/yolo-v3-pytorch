@@ -211,3 +211,31 @@ def load_classes(namesfile):
     names = [x for x in names if len(x) > 0]  # 删去空行
     return names
 
+
+def prep_image(img, inp_dim):
+    """
+        prep_image 来将 numpy 数组转换成 PyTorch 的输入格式。
+    准备图像以输入神经网络。返回Variable
+    """
+
+    img = cv2.resize(img, (inp_dim, inp_dim))
+    img = img[:, :, ::-1].transpose((2, 0, 1)).copy()
+    img = torch.from_numpy(img).float().div(255.0).unsqueeze(0)
+    return img
+
+def letterbox_image(img, inp_dim):
+    '''OpenCV 会将图像载入为 numpy 数组，颜色通道的顺序为 BGR。
+    PyTorch 的图像输入格式是（batch x 通道 x 高度 x 宽度），其通道顺序为 RGB。
+    letterbox_image来调整图像大小，保持纵横比一致，并用颜色填充左边区域（128,128,128）'''
+    img_w, img_h = img.shape[1], img.shape[0]
+    w, h = inp_dim
+    new_w = int(img_w * min(w / img_w, h / img_h))
+    new_h = int(img_h * min(w / img_w, h / img_h))
+    resized_image = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+
+    canvas = np.full((inp_dim[1], inp_dim[0], 3), 128)
+
+    canvas[(h - new_h) // 2:(h - new_h) // 2 + new_h, (w - new_w) // 2:(w - new_w) // 2 + new_w, :] = resized_image
+
+    return canvas
+
