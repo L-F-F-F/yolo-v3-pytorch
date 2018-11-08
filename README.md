@@ -21,7 +21,7 @@ AlexeyAB的[yolo-v3](https://github.com/AlexeyAB/darknet)基于C语言的darknet
 
 >RuntimeError: invalid argument 2: size '[72 x 256 x 1 x 1]' is invalid for input with 18431 elements at ..\src\TH\THStorage.c:41
 
-原因是权重函数的 Header 位数读取出错。从yolov3开始，subversion数的类型是 `size_t` 而不是int32。同时注意，对于Joseph Redmon提供的官方YOLO v3权重文件，Header长度为5 x 32位，而在YOLO v2中，它是4x32位长。 **解决方法** 将 `darknet.py` 中的函数 `load_weights`修改 `count`为4，即修改 `header = np.fromfile(fp, dtype=np.int32, count=5)`
+原因是权重函数的 Header 位数读取出错。从yolov3开始，subversion数的类型是 `size_t` 而不是int32。同时注意，对于Joseph Redmon提供的官方YOLO v3权重文件，Header长度为5 x 32位，而在YOLO v2中，它是4x32位长。 **解决方法** 将 `darknet.py` 中的函数 `load_weights`修改 `count`为4，即修改 `header = np.fromfile(fp, dtype=np.int32, count=5)` 为 `header = np.fromfile(fp, dtype=np.int32, count=4)`
 
 或者将 `load_weights()` 函数的开头修改为如下代码，这样可兼容不同版本的weights文件：
 
@@ -52,3 +52,20 @@ AlexeyAB的[yolo-v3](https://github.com/AlexeyAB/darknet)基于C语言的darknet
 	    weights = np.fromfile(fp, dtype = np.float32)
 
 在 Ayoosh Kathuria 的 github 上有个 [issue](https://github.com/ayooshkathuria/pytorch-yolo-v3/issues/19) 专门讨论这个问题。
+
+---
+## 检测
+权重文件上传至[百度云](https://pan.baidu.com/s/1KT8voQAUz8bOIHdmM59_1A)，密码275z，适用于检测较高分辨率的军用飞机，不再适用COCO等，包含19类军机，输入图片 768*768 `F18 B1 C130 F15E KC135 F16 A10 Fighter F4 T38 F22 C17 F15 E3 KC10 B52 B2 T41 Boeing`
+
+运行`python detector.py`默认检测 testPics/14-9.jpg，`python detector.py --images testPics/` 检测 testPics 目录下所有图片，检测结果保存在 det 目录下。
+
+	命令行
+	--images		修改待检测图片路径，默认 testPics/14-9.jpg
+	--det			保存检测结果的目录，默认 det
+	--bs			batch大小，默认 1
+	--confidence	objectness置信度，默认 0.5
+	--nms_thresh	NMS阈值，默认 0.4
+	--cfg			cfg文件，默认 cfg/yolo-obj_4_416.cfg
+	--weights		权重文件，默认 yolo-obj_4_416_28000.weights
+	--reso			输入图像的分辨率，默认 768
+![](https://i.imgur.com/iRGorvp.jpg) ![](https://i.imgur.com/MWpoN3D.jpg)
