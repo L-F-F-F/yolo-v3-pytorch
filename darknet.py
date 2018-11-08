@@ -241,6 +241,13 @@ class Darknet(nn.Module):
         # 第一个 160 比特的权重文件保存了 5 个 int32 值，它们构成了文件的标头
         # 主版本数，次版本数，子版本数，4、5是训练期间网络看到的图像
         header = np.fromfile(fp, dtype=np.int32, count=5)
+        # if (header[0] * 10 + header[1] >= 2) and (header[0] < 1000) and (header[1] < 1000):
+        #     sub_header = np.fromfile(fp, dtype=np.int32, count=2)
+        # else:
+        #     sub_header = np.fromfile(fp, dtype=np.int32, count=1)
+        # header = np.append(header, sub_header)
+        #上面几行与原博客不同，以兼容YOLO v2 v3的weights文件
+
         self.header = torch.from_numpy(header)
         self.seen = self.header[3]
 
@@ -328,11 +335,11 @@ def get_test_input():  # 测试输入图片
 # 24行，包括4个边界框属性(bx,by,bh,bw)、1个objectness分数和19个类别分数
 #10647 是每个图像中所预测的边界框的数量
 # # modeltest = Darknet("cfg/yolov3.cfg")
-# modeltest = Darknet("cfg/yolo-obj_4_416_small.cfg")
+# modeltest = Darknet("cfg/yolo-obj_4_416.cfg")
 # inp = get_test_input()
 # pred = modeltest(inp, torch.cuda.is_available())
 # # print (pred)
 # print(pred.size())
 
-model = Darknet("cfg/yolo-obj_4_416_small.cfg")
-model.load_weights("yolo-obj_24000_4_416_small.weights")
+model = Darknet("cfg/yolo-obj_4_416.cfg")
+model.load_weights("yolo-obj_4_416_28000.weights")

@@ -43,12 +43,12 @@ def arg_parse():
     # cfg（替代配置文件
     parser.add_argument("--cfg", dest='cfgfile', help=
     "Config file",
-                        default="cfg/yolo-obj_4_416_small.cfg", type=str)
+                        default="cfg/yolo-obj_4_416.cfg", type=str)
 
     # weights
     parser.add_argument("--weights", dest='weightsfile', help=
     "weightsfile",
-                        default="yolo-obj_24000_4_416_small.weights", type=str)
+                        default="yolo-obj_4_416_28000.weights", type=str)
 
     # reso（输入图像的分辨率，可用于在速度与准确度之间的权衡）
     parser.add_argument("--reso", dest='reso', help=

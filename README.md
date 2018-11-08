@@ -16,3 +16,39 @@ AlexeyAB的[yolo-v3](https://github.com/AlexeyAB/darknet)基于C语言的darknet
 ![](https://i.imgur.com/BsBDCaA.png)
 
 上图展示了权重存储方式。首先，权重只属于两种类型的层，即批归一化层（batch norm layer）和卷积层。这些层的权重储存顺序和配置文件中定义层级的顺序完全相同。所以，如果一个 convolutional 后面跟随着 shortcut 块，而 shortcut 连接了另一个 convolutional 块，则你会期望文件包含了先前 convolutional 块的权重，其后则是后者的权重。当批归一化层出现在卷积模块中时，它是不带有偏置项的。然而，当卷积模块不存在批归一化，则偏置项的「权重」就会从文件中读取。
+
+权重读取这块比较容易出错，按照原作者的方法在加载官方文件 `yolov3.cfg` 和 `yolov3.weights` 时不会出错，但是再使用自己的cfg文件以及训练好的weights文件时，可能会出现类似的错误
+
+>RuntimeError: invalid argument 2: size '[72 x 256 x 1 x 1]' is invalid for input with 18431 elements at ..\src\TH\THStorage.c:41
+
+原因是权重函数的 Header 位数读取出错。从yolov3开始，subversion数的类型是 `size_t` 而不是int32。同时注意，对于Joseph Redmon提供的官方YOLO v3权重文件，Header长度为5 x 32位，而在YOLO v2中，它是4x32位长。 **解决方法** 将 `darknet.py` 中的函数 `load_weights`修改 `count`为4，即修改 `header = np.fromfile(fp, dtype=np.int32, count=5)`
+
+或者将 `load_weights()` 函数的开头修改为如下代码，这样可兼容不同版本的weights文件：
+
+	def load_weights(self, weightfile):
+	
+	    #Open the weights file
+	    fp = open(weightfile, "rb")
+	
+	    #The first 4 values are header information 
+	    # 1. Major version number
+	    # 2. Minor Version Number
+	    # 3. Subversion number 
+	    # 4. IMages seen 
+	    header = np.fromfile(fp, dtype = np.int32, count = 3)        
+	    if (header[0]*10+header[1] >=2) and (header[0] < 1000) and (header[1] < 1000):
+	        sub_header = np.fromfile(fp, dtype = np.int32, count = 2)
+	    else:
+	        sub_header = np.fromfile(fp, dtype = np.int32, count = 1)
+	    
+	    header = np.append(header,sub_header)
+	
+	    self.header = torch.from_numpy(header)
+	    
+	    self.seen = self.header[3]
+	    
+	    #The rest of the values are the weights
+	    # Let's load them up
+	    weights = np.fromfile(fp, dtype = np.float32)
+
+在 Ayoosh Kathuria 的 github 上有个 [issue](https://github.com/ayooshkathuria/pytorch-yolo-v3/issues/19) 专门讨论这个问题。
