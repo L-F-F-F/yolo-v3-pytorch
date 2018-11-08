@@ -240,12 +240,12 @@ class Darknet(nn.Module):
         fp = open(weightfile, "rb")
         # 第一个 160 比特的权重文件保存了 5 个 int32 值，它们构成了文件的标头
         # 主版本数，次版本数，子版本数，4、5是训练期间网络看到的图像
-        header = np.fromfile(fp, dtype=np.int32, count=5)
-        # if (header[0] * 10 + header[1] >= 2) and (header[0] < 1000) and (header[1] < 1000):
-        #     sub_header = np.fromfile(fp, dtype=np.int32, count=2)
-        # else:
-        #     sub_header = np.fromfile(fp, dtype=np.int32, count=1)
-        # header = np.append(header, sub_header)
+        header = np.fromfile(fp, dtype=np.int32, count=3)
+        if (header[0] * 10 + header[1] >= 2) and (header[0] < 1000) and (header[1] < 1000):
+            sub_header = np.fromfile(fp, dtype=np.int32, count=2)
+        else:
+            sub_header = np.fromfile(fp, dtype=np.int32, count=1)
+        header = np.append(header, sub_header)
         #上面几行与原博客不同，以兼容YOLO v2 v3的weights文件
 
         self.header = torch.from_numpy(header)
