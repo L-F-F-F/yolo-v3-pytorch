@@ -55,7 +55,7 @@ AlexeyAB的[yolo-v3](https://github.com/AlexeyAB/darknet)基于C语言的darknet
 
 ---
 ## 检测
-权重文件上传至[百度云](https://pan.baidu.com/s/1KT8voQAUz8bOIHdmM59_1A)，密码275z，适用于检测较高分辨率的军用飞机，不再适用COCO等，包含19类军机，输入图片 768*768 `F18 B1 C130 F15E KC135 F16 A10 Fighter F4 T38 F22 C17 F15 E3 KC10 B52 B2 T41 Boeing`
+权重文件上传至[Baidu Drive](https://pan.baidu.com/s/1KT8voQAUz8bOIHdmM59_1A)，密码275z，适用于检测较高分辨率的军用飞机，不再适用COCO等，包含19类军机，输入图片 768*768 `F18 B1 C130 F15E KC135 F16 A10 Fighter F4 T38 F22 C17 F15 E3 KC10 B52 B2 T41 Boeing`
 
 运行`python detector.py`默认检测 testPics/14-9.jpg，`python detector.py --images testPics/` 检测 testPics 目录下所有图片，检测结果保存在 det 目录下。
 
@@ -69,3 +69,7 @@ AlexeyAB的[yolo-v3](https://github.com/AlexeyAB/darknet)基于C语言的darknet
 	--weights		权重文件，默认 yolo-obj_4_416_28000.weights
 	--reso			输入图像的分辨率，默认 768
 ![](https://i.imgur.com/iRGorvp.jpg) ![](https://i.imgur.com/MWpoN3D.jpg)
+
+---
+## 训练
+训练部分见 [BobLiu20](https://github.com/BobLiu20/YOLOv3_PyTorch)。
